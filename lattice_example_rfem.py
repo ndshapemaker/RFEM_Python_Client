@@ -19,14 +19,15 @@ def get_fea_input(json_file):
     return data
 
 
-def create_dlubal_from_fea_input_tower(fea_input_tower_nodes):
+def create_dlubal_nodes_from_fea_input_tower(fea_input_tower_nodes):
     for node in fea_input_tower_nodes:
         Node(node['number'], node['x'], node['y'], float(node['z'])*-1)
 
 
-def create_dlubal_fea_members(fea_input_tower_frame_elements):
+def create_dlubal_fea_members(fea_input_tower_frame_elements, section_dict):
     for member in fea_input_tower_frame_elements:
-        Member(member['member_number'], member['start_node']['number'], member['end_node']['number'], 0.0, 1, 1)
+        section_number = section_dict[member['cross_section']['name']]["section_number_dlubal"]
+        Member(member['member_number'], member['start_node']['number'], member['end_node']['number'], 0.0, section_number, section_number)
 
 
 def create_dlubal_nodal_supports(fea_input_tower_supports):
@@ -37,10 +38,13 @@ def create_dlubal_nodal_supports(fea_input_tower_supports):
 def create_dlubal_load_cases(fea_load_cases):
     nodal_load_number = 1
     for load_case in fea_load_cases:
-        LoadCase(load_case["number"], load_case["name"], [False])
+        if load_case['gravitional_constant'] != 0.0:
+            self_weight_factor = load_case['gravitional_constant'] / -9810.0
+            self_weight_list = [True, 0, 0, self_weight_factor]
+        else:
+             self_weight_list = [False]
+        LoadCase(load_case["number"], load_case["name"], self_weight_list)
         create_dlubal_nodal_loads(load_case['nodal_loads'], nodal_load_number, load_case["number"])
-
-
 
 
 def create_dlubal_nodal_loads(nodal_loads, nodal_load_number: int, load_case_number: int):
@@ -50,7 +54,16 @@ def create_dlubal_nodal_loads(nodal_loads, nodal_load_number: int, load_case_num
         nodal_load_number += 1
 
 
-
+def create_dlubal_sections(fea_input_tower_frame_elements):
+    section_dict = {}
+    section_number = 1
+    for frame_element in fea_input_tower_frame_elements:
+        section_name = frame_element['cross_section']['name']
+        if section_name not in section_dict:
+            Section(no=section_number, name='IPE 300', comment=section_name)
+            section_dict[section_name] = {"section_number_dlubal": section_number}
+            section_number += 1
+    return section_dict
 
 
 
@@ -59,16 +72,11 @@ Model(new_model=True, model_name='first_example_rfem')
 Model.clientModel.service.begin_modification('new')
 
 
-
-
-
-
 #Get FEA input
 lattice_file = '01-examples-nils/02_fea_input_3legg_empty.json'
 fea_input = get_fea_input(lattice_file)
 
-
-create_dlubal_from_fea_input_tower(fea_input['fea_input_tower']['nodes'])
+create_dlubal_nodes_from_fea_input_tower(fea_input['fea_input_tower']['nodes'])
 
 
 # Step 3: Materials
@@ -76,11 +84,11 @@ Material(1, 'S235')
 
 
 # Step 4: Sections
-Section(1, 'R 100')
+section_dict = create_dlubal_sections(fea_input['fea_input_tower']['frame_elements'])
 
 
 # Step 5: Elements
-create_dlubal_fea_members(fea_input['fea_input_tower']['frame_elements'])
+create_dlubal_fea_members(fea_input['fea_input_tower']['frame_elements'], section_dict)
 
 
 # Step 6: Supports
@@ -88,14 +96,7 @@ create_dlubal_nodal_supports(fea_input['fea_input_tower']['tower_supports'])
 
 
 # Step 7: Load Case
-LoadCase(1000, 'Self-weight',[True, 0, 0, 1])
 create_dlubal_load_cases(fea_input['fea_load_cases'])
-
-
-
-
-# Step 8: Adding Loads
-#NodalLoad(1, 1000, '5',load_direction=NodalLoadDirection.LOAD_DIRECTION_GLOBAL_Z_OR_USER_DEFINED_W, magnitude=1000)
 
 
 # Step 9: Analysis Settings
