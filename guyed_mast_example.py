@@ -29,7 +29,22 @@ def create_dlubal_nodes_from_fea_input_tower(fea_input_tower_nodes):
 def create_dlubal_fea_members(fea_input_tower_frame_elements, section_dict):
     for member in fea_input_tower_frame_elements:
         section_number = section_dict[member['cross_section']['name']]["section_number_dlubal"]
-        Member(member['member_number'], member['start_node']['number'], member['end_node']['number'], 0.0, section_number, section_number)
+        if member['member_type'] == 'GuyWire':
+            Member.Cable(
+                no=member['member_number'],
+                start_node_no=member['start_node']['number'],
+                end_node_no=member['end_node']['number'],
+                section_no=section_number,
+                )
+        else:
+            Member(
+                no=member['member_number'],
+                start_node_no=member['start_node']['number'],
+                end_node_no=member['end_node']['number'],
+                rotation_angle=0.0,
+                start_section_no=section_number,
+                end_section_no=section_number,
+                )
 
 
 def create_dlubal_nodal_supports(fea_input_tower_supports):
@@ -84,13 +99,6 @@ def create_dlubal_sections(fea_input_tower_frame_elements):
     return section_dict
 
 
-# def create_dlubal_cross_section_material(frame_element, section_number):
-#     Material.UserDefinedMaterial(
-#         section_number,
-#         'S235JR', MaterialType.TYPE_STEEL,
-#         MaterialModel.MODEL_ORTHOTROPIC_3D,
-#         220000000000,
-#         )
 
 
 def dlubal_section_name(cross_section_name: str):
