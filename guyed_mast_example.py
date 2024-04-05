@@ -54,15 +54,18 @@ def create_dlubal_nodal_supports(fea_input_tower_supports):
 
 def create_dlubal_load_cases(fea_load_cases, predefined_node_displacements):
     nodal_load_number = 1
+    dlubal_load_case_number = 1
     for load_case in fea_load_cases:
         if load_case['gravitional_constant'] != 0.0:
             self_weight_factor = load_case['gravitional_constant'] / 9810.0
             self_weight_list = [True, 0, 0, self_weight_factor]
         else:
              self_weight_list = [False]
-        LoadCase(load_case["number"], load_case["name"], self_weight_list)
-        create_dlubal_nodal_loads(load_case['nodal_loads'], nodal_load_number, load_case["number"])
-        create_dlubal_predefined_node_displacements(predefined_node_displacements, load_case["number"])
+        print("Load case number: " + str(dlubal_load_case_number) + " , and name: "+ str(load_case["name"]))
+        LoadCase(dlubal_load_case_number, load_case["name"], self_weight_list)
+        create_dlubal_nodal_loads(load_case['nodal_loads'], nodal_load_number, dlubal_load_case_number)
+        create_dlubal_predefined_node_displacements(predefined_node_displacements, dlubal_load_case_number)
+        dlubal_load_case_number += 1
 
 
 def create_dlubal_nodal_loads(nodal_loads, nodal_load_number: int, load_case_number: int):
@@ -111,7 +114,11 @@ def dlubal_section_name(cross_section_name: str):
         dlubal_name = "R 25"
     elif cross_section_name == "D16":
         dlubal_name = "R 16"
+    elif cross_section_name == "D18":
+        dlubal_name = "R 18"
     elif cross_section_name == "SWR_1x7_D9":
+        dlubal_name = "Cable 10.00"
+    elif cross_section_name == "SWR_1x7_D11.4":
         dlubal_name = "Cable 10.00"
     else:
         dlubal_name = default_name
@@ -131,8 +138,10 @@ BaseSettings(
 
 
 #Get FEA input
-lattice_file = '01-examples-nils/03_fea_input_B1.json'
-fea_input = get_fea_input(lattice_file)
+#guy_mast_file = '01-examples-nils/04_fea_input_B1_patch.json'
+#guy_mast_file = '01-examples-nils/05_fea_input_B4_patch.json'
+guy_mast_file = '01-examples-nils/05_fea_input_B4.json'
+fea_input = get_fea_input(guy_mast_file)
 create_dlubal_nodes_from_fea_input_tower(fea_input['fea_input_tower']['nodes'])
 
 
